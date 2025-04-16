@@ -20,7 +20,7 @@ export default function RegisterPage() {
     lastName: "",
     username: "",
     companyName: "",
-    role: "",
+    position: "",
   });
   const router = useRouter();
 
@@ -28,7 +28,7 @@ export default function RegisterPage() {
     setIsClient(true);
   }, []);
 
-  const roles = [
+  const positions = [
     "CEO",
     "CTO",
     "CFO",
@@ -75,10 +75,10 @@ export default function RegisterPage() {
     });
   };
 
-  const handleRoleChange = (value: string) => {
+  const handlePositionChange = (value: string) => {
     setFormData({
       ...formData,
-      role: value,
+      position: value,
     });
   };
 
@@ -184,21 +184,21 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="role">Role in Company (Optional)</Label>
+              <Label htmlFor="position">Position in Company (Optional)</Label>
               <div className="relative">
                 <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Select
                   disabled={loading}
-                  value={formData.role}
-                  onValueChange={handleRoleChange}
+                  value={formData.position}
+                  onValueChange={handlePositionChange}
                 >
                   <SelectTrigger className="w-full pl-9">
-                    <SelectValue placeholder="Select your role" />
+                    <SelectValue placeholder="Select your position" />
                   </SelectTrigger>
                   <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role} value={role.toLowerCase()}>
-                        {role}
+                    {positions.map((position) => (
+                      <SelectItem key={position} value={position.toLowerCase()}>
+                        {position}
                       </SelectItem>
                     ))}
                   </SelectContent>

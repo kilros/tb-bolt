@@ -1,10 +1,14 @@
-"use client";
+'use client';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Search, ChevronDown, Plus, FileText, Puzzle, Upload, X, Library, FolderOpen, Building, Briefcase, Mail, User, FileEdit, MessageSquare, FilePlus, Calendar, UserPlus } from 'lucide-react';
+import { Search, ChevronDown, Plus, FileText, Puzzle, X, Library, FolderOpen, Building, Briefcase, Mail, User, FileEdit, MessageSquare, FilePlus, Calendar, UserPlus, ArrowLeft, History, Clock, Menu, FileCheck, Sparkles as FileSparkles, FileCode } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRouter } from 'next/navigation';
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -28,23 +32,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { useDropzone } from 'react-dropzone';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentEditor } from '@/components/document-editor';
-import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+
+interface DocumentHistory {
+  timestamp: string;
+  user: string;
+  action: 'updated' | 'approved' | 'revoked';
+  details?: string;
+}
 
 interface Collaborator {
   email: string;
   role: string;
+  approved?: boolean;
 }
 
 interface Document {
@@ -57,72 +60,117 @@ interface Document {
   createdDate: string;
   status: string;
   content?: string;
+  history: DocumentHistory[];
 }
 
-interface Template {
-  id: number;
-  name: string;
-  dateAdded: string;
-  content: string;
-}
-
-interface Clause {
-  id: number;
-  name: string;
-  dateAdded: string;
-  content?: string;
-}
-
-const mockTemplates: Template[] = [
-  { 
-    id: 1, 
-    name: "Sales Agreement Template", 
-    dateAdded: "2024-03-20",
-    content: `
-      <h1>Sales Agreement</h1>
-      <p>This Sales Agreement (the "Agreement") is entered into as of [DATE] by and between:</p>
-      <p><strong>Seller:</strong> [SELLER NAME]<br>
-      <strong>Buyer:</strong> [BUYER NAME]</p>
-      <h2>1. Sale of Goods</h2>
-      <p>The Seller agrees to sell and the Buyer agrees to purchase the following goods:</p>
-      <p>[DESCRIPTION OF GOODS]</p>
-      <h2>2. Purchase Price</h2>
-      <p>The Buyer agrees to pay the total purchase price of [AMOUNT] for the goods.</p>
-    `
+const sampleDocuments: Document[] = [
+  {
+    docId: "DOC-2024-001",
+    title: "Sales Agreement - ABC Corp",
+    description: "Annual sales agreement with ABC Corporation for software licensing",
+    category: "Contract",
+    dueDate: "2024-04-15",
+    collaborators: [
+      { email: "john@example.com", role: "owner" },
+      { email: "sarah@example.com", role: "editor" },
+      { email: "legal@example.com", role: "approver" },
+      { email: "finance@example.com", role: "reviewer" },
+      { email: "sales@example.com", role: "viewer" }
+    ],
+    createdDate: "2024-03-01",
+    status: "In Review",
+    content: "Sample contract content...",
+    history: [
+      {
+        timestamp: "2024-03-20 15:30:00",
+        user: "sarah@example.com",
+        action: "updated",
+        details: "Updated payment terms section"
+      },
+      {
+        timestamp: "2024-03-19 14:20:00",
+        user: "legal@example.com",
+        action: "approved",
+        details: "Approved initial draft"
+      }
+    ]
   },
-  { 
-    id: 2, 
-    name: "NDA Template", 
-    dateAdded: "2024-03-19",
-    content: `
-      <h1>Non-Disclosure Agreement</h1>
-      <p>This Non-Disclosure Agreement (the "Agreement") is entered into as of [DATE] between:</p>
-      <p><strong>Party A:</strong> [PARTY A NAME]<br>
-      <strong>Party B:</strong> [PARTY B NAME]</p>
-      <h2>1. Confidential Information</h2>
-      <p>For purposes of this Agreement, "Confidential Information" shall mean any and all non-public information...</p>
-    `
+  {
+    docId: "DOC-2024-002",
+    title: "Employee Handbook 2024",
+    description: "Updated company policies and procedures",
+    category: "Policy",
+    collaborators: [
+      { email: "hr@example.com", role: "owner" },
+      { email: "legal@example.com", role: "approver" },
+      { email: "ceo@example.com", role: "approver" },
+      { email: "manager@example.com", role: "editor" },
+      { email: "compliance@example.com", role: "reviewer" },
+      { email: "employee.rep@example.com", role: "viewer" }
+    ],
+    createdDate: "2024-03-10",
+    status: "Draft",
+    content: "Employee handbook content...",
+    history: []
   },
-  { 
-    id: 3, 
-    name: "Service Contract Template", 
-    dateAdded: "2024-03-18",
-    content: `
-      <h1>Service Contract</h1>
-      <p>This Service Contract (the "Contract") is made between:</p>
-      <p><strong>Service Provider:</strong> [PROVIDER NAME]<br>
-      <strong>Client:</strong> [CLIENT NAME]</p>
-      <h2>1. Services</h2>
-      <p>The Service Provider agrees to provide the following services:</p>
-      <p>[DESCRIPTION OF SERVICES]</p>
-    `
+  {
+    docId: "DOC-2024-003",
+    title: "Project Proposal - XYZ Project",
+    description: "Technical proposal for XYZ client project",
+    category: "Proposal",
+    dueDate: "2024-03-30",
+    collaborators: [
+      { email: "pm@example.com", role: "owner" },
+      { email: "tech@example.com", role: "editor" },
+      { email: "architect@example.com", role: "editor" },
+      { email: "sales@example.com", role: "reviewer" },
+      { email: "finance@example.com", role: "approver" },
+      { email: "legal@example.com", role: "approver" },
+      { email: "client.rep@example.com", role: "viewer" }
+    ],
+    createdDate: "2024-03-15",
+    status: "Pending Approval",
+    content: "Project proposal content...",
+    history: []
   },
-];
-
-const mockClauses: Clause[] = [
-  { id: 1, name: "Confidentiality Clause", dateAdded: "2024-03-20" },
-  { id: 2, name: "Termination Clause", dateAdded: "2024-03-19" },
-  { id: 3, name: "Liability Clause", dateAdded: "2024-03-18" },
+  {
+    docId: "DOC-2024-004",
+    title: "NDA - DEF Industries",
+    description: "Non-disclosure agreement for partnership with DEF Industries",
+    category: "Agreement",
+    dueDate: "2024-04-01",
+    collaborators: [
+      { email: "legal@example.com", role: "owner" },
+      { email: "business@example.com", role: "viewer" },
+      { email: "ceo@example.com", role: "approver" },
+      { email: "partner.legal@def.com", role: "editor" },
+      { email: "compliance@example.com", role: "reviewer" }
+    ],
+    createdDate: "2024-03-18",
+    status: "Signed",
+    content: "NDA content...",
+    history: []
+  },
+  {
+    docId: "DOC-2024-005",
+    title: "Q1 2024 Financial Report",
+    description: "Quarterly financial analysis and projections",
+    category: "Report",
+    collaborators: [
+      { email: "finance@example.com", role: "owner" },
+      { email: "cfo@example.com", role: "editor" },
+      { email: "accountant@example.com", role: "editor" },
+      { email: "auditor@example.com", role: "reviewer" },
+      { email: "board@example.com", role: "approver" },
+      { email: "ceo@example.com", role: "approver" },
+      { email: "investor.relations@example.com", role: "viewer" },
+      { email: "compliance@example.com", role: "viewer" }
+    ],
+    createdDate: "2024-03-20",
+    status: "Final",
+    content: "Financial report content...",
+    history: []
+  }
 ];
 
 const mockContractNotifications = [
@@ -177,30 +225,16 @@ const mockMessageNotifications = [
 ];
 
 export default function Dashboard() {
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [templates, setTemplates] = useState<Template[]>(mockTemplates);
-  const [clauses, setClauses] = useState<Clause[]>(mockClauses);
-  const [documentTitle, setDocumentTitle] = useState('');
-  const [documentDescription, setDocumentDescription] = useState('');
-  const [documentCategory, setDocumentCategory] = useState('');
-  const [documentDueDate, setDocumentDueDate] = useState('');
-  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const router = useRouter();
+  const [documents, setDocuments] = useState<Document[]>(sampleDocuments);
   const [activeTab, setActiveTab] = useState('my-documents');
   const [searchQuery, setSearchQuery] = useState('');
-  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
-  const [clauseDialogOpen, setClauseDialogOpen] = useState(false);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [templateLibraryOpen, setTemplateLibraryOpen] = useState(false);
-  const [clauseLibraryOpen, setClauseLibraryOpen] = useState(false);
+  const [editingDocument, setEditingDocument] = useState<Document | null>(null);
   const [documentContent, setDocumentContent] = useState('');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [selectedClause, setSelectedClause] = useState<Clause | null>(null);
-  const [isViewingTemplate, setIsViewingTemplate] = useState(false);
-  const [isViewingClause, setIsViewingClause] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const [profile, setProfile] = useState({
     fullName: "John Doe",
@@ -223,91 +257,120 @@ export default function Dashboard() {
     },
   ];
 
-  const categories = [
-    'Contract',
-    'Agreement',
-    'Proposal',
-    'Invoice',
-    'Report',
-    'Other'
-  ];
+  const handleApproveDocument = (collaborator: Collaborator) => {
+    if (!editingDocument) return;
 
-  const onDrop = (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file?.type === 'application/pdf') {
-      setUploadedFile(file);
-      
-      // Simulate reading the PDF content
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = `
-          <h1>${file.name}</h1>
-          <p>This is the converted content of your PDF file.</p>
-          <p>In a production environment, this would contain the actual converted content of your PDF.</p>
-        `;
-        
-        if (templateDialogOpen) {
-          const newTemplate: Template = {
-            id: templates.length + 1,
-            name: file.name.replace('.pdf', ''),
-            dateAdded: new Date().toISOString().split('T')[0],
-            content: content
-          };
-          setSelectedTemplate(newTemplate);
-          setIsViewingTemplate(true);
-        } else if (clauseDialogOpen) {
-          const newClause: Clause = {
-            id: clauses.length + 1,
-            name: file.name.replace('.pdf', ''),
-            dateAdded: new Date().toISOString().split('T')[0],
-            content: content
-          };
-          setSelectedClause(newClause);
-          setIsViewingClause(true);
-        }
+    const updatedCollaborators = editingDocument.collaborators.map(c => 
+      c.email === collaborator.email 
+        ? { ...c, approved: true }
+        : c
+    );
+
+    const newHistory: DocumentHistory = {
+      timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
+      user: collaborator.email,
+      action: 'approved',
+      details: 'Approved document changes'
+    };
+
+    const updatedDocument = {
+      ...editingDocument,
+      collaborators: updatedCollaborators,
+      history: [newHistory, ...(editingDocument.history || [])]
+    };
+
+    setDocuments(documents.map(doc => 
+      doc.docId === editingDocument.docId 
+        ? updatedDocument 
+        : doc
+    ));
+
+    setEditingDocument(updatedDocument);
+    toast.success('Document changes approved');
+  };
+
+  const handleRevokeApproval = (collaborator: Collaborator) => {
+    if (!editingDocument) return;
+
+    const updatedCollaborators = editingDocument.collaborators.map(c => 
+      c.email === collaborator.email 
+        ? { ...c, approved: false }
+        : c
+    );
+
+    const newHistory: DocumentHistory = {
+      timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
+      user: collaborator.email,
+      action: 'revoked',
+      details: 'Revoked document approval'
+    };
+
+    const updatedDocument = {
+      ...editingDocument,
+      collaborators: updatedCollaborators,
+      history: [newHistory, ...(editingDocument.history || [])]
+    };
+
+    setDocuments(documents.map(doc => 
+      doc.docId === editingDocument.docId 
+        ? updatedDocument 
+        : doc
+    ));
+
+    setEditingDocument(updatedDocument);
+    toast.success('Approval revoked');
+  };
+
+  const handleRemoveCollaborator = (collaboratorEmail: string) => {
+    if (!editingDocument) return;
+
+    const updatedCollaborators = editingDocument.collaborators.filter(
+      c => c.email !== collaboratorEmail
+    );
+
+    const updatedDocument = {
+      ...editingDocument,
+      collaborators: updatedCollaborators
+    };
+
+    setDocuments(documents.map(doc => 
+      doc.docId === editingDocument.docId 
+        ? updatedDocument 
+        : doc
+    ));
+
+    setEditingDocument(updatedDocument);
+    toast.success('Collaborator removed');
+  };
+
+  const getApprovalStatus = (collaborator: Collaborator) => {
+    if (collaborator.role.toLowerCase() === 'viewer') {
+      return { 
+        label: 'Not Required', 
+        color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
+        showActions: false 
       };
-      reader.readAsText(file);
     }
+
+    if (collaborator.approved) {
+      return { 
+        label: 'Approved', 
+        color: 'bg-green-500/10 text-green-500 border-green-500/20',
+        showActions: true 
+      };
+    }
+
+    return { 
+      label: 'Pending', 
+      color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
+      showActions: true 
+    };
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf']
-    },
-    maxFiles: 1
-  });
-
-  const handleTemplateUpload = async () => {
-    if (!uploadedFile || !selectedTemplate) return;
-    
-    try {
-      setTemplates([selectedTemplate, ...templates]);
-      setUploadedFile(null);
-      setSelectedTemplate(null);
-      setIsViewingTemplate(false);
-      setTemplateDialogOpen(false);
-      toast.success('Template uploaded successfully');
-    } catch (error) {
-      console.error('Upload failed:', error);
-      toast.error('Failed to upload template');
-    }
-  };
-
-  const handleClauseUpload = async () => {
-    if (!uploadedFile || !selectedClause) return;
-    
-    try {
-      setClauses([selectedClause, ...clauses]);
-      setUploadedFile(null);
-      setSelectedClause(null);
-      setIsViewingClause(false);
-      setClauseDialogOpen(false);
-      toast.success('Clause uploaded successfully');
-    } catch (error) {
-      console.error('Upload failed:', error);
-      toast.error('Failed to upload clause');
-    }
+  const getInitials = (email: string) => {
+    const name = email.split('@')[0];
+    const parts = name.split(/[._-]/);
+    return parts.map(part => part[0]?.toUpperCase() || '').join('');
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -324,806 +387,580 @@ export default function Dashboard() {
 
   const handleTabClick = (tabId: string) => {
     if (tabId === 'notifications') {
-      setNotificationsDialogOpen(true);
+      router.push('/notifications');
     } else {
       setActiveTab(tabId);
     }
   };
 
-  const handleTemplateSelect = (template: Template) => {
-    setDocumentContent(template.content);
-    setIsEditing(true);
-    setTemplateLibraryOpen(false);
-    toast.success('Template loaded successfully');
+  const handleEditDocument = (doc: Document) => {
+    setEditingDocument(doc);
+    setDocumentContent(doc.content || '');
   };
 
-  const handleAddCollaborator = (email: string, role: string) => {
-    setCollaborators([...collaborators, { email, role }]);
-    toast.success('Collaborator added successfully');
-  };
+  const handleUpdateDocument = () => {
+    if (!editingDocument) return;
 
-  const handleRemoveCollaborator = (email: string) => {
-    setCollaborators(collaborators.filter(c => c.email !== email));
-    toast.success('Collaborator removed');
-  };
-
-  const handleSaveDocument = () => {
-    if (!documentTitle.trim()) {
-      toast.error('Please enter a document title');
-      return;
-    }
-
-    const newDocument: Document = {
-      docId: `DOC-${Math.random().toString(36).substr(2, 9)}`,
-      title: documentTitle,
-      description: documentDescription,
-      category: documentCategory,
-      dueDate: documentDueDate || undefined,
-      collaborators: collaborators,
-      createdDate: new Date().toISOString(),
-      status: 'Draft',
-      content: documentContent,
+    const newHistory: DocumentHistory = {
+      timestamp: new Date().toISOString().replace('T', ' ').split('.')[0],
+      user: profile.email,
+      action: 'updated',
+      details: 'Updated document content'
     };
 
-    setDocuments([newDocument, ...documents]);
-    setDocumentTitle('');
-    setDocumentDescription('');
-    setDocumentCategory('');
-    setDocumentDueDate('');
-    setCollaborators([]);
-    setDocumentContent('');
-    setIsEditing(false);
-    setSaveDialogOpen(false);
-    toast.success('Document saved successfully');
+    const updatedDocument = {
+      ...editingDocument,
+      content: documentContent,
+      history: [newHistory, ...(editingDocument.history || [])]
+    };
+
+    setDocuments(documents.map(doc => 
+      doc.docId === editingDocument.docId 
+        ? updatedDocument 
+        : doc
+    ));
+
+    setEditingDocument(updatedDocument);
+    toast.success('Document updated successfully');
+  };
+
+  const handleRevokeDocument = () => {
+    if (!editingDocument) return;
+
+    setDocumentContent(editingDocument.content || '');
+    toast.success('Changes revoked');
   };
 
   return (
-    <div className="min-h-screen bg-[#1a1d21] flex flex-col">
-      <nav className="border-b border-gray-800 bg-[#1a1d21]">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Image
-                src="https://imgur.com/pJvuGQK.png"
-                alt="Tome Block Logo"
-                width={160}
-                height={40}
-                className="object-contain"
-                priority
-              />
-            </div>
+    <>
+      <div className="min-h-screen bg-[#1a1d21] flex flex-col">
+        <nav className="border-b border-gray-800 bg-[#1a1d21]">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center">
+                <Image
+                  src="https://imgur.com/pJvuGQK.png"
+                  alt="Tome Block Logo"
+                  width={160}
+                  height={40}
+                  className="object-contain"
+                  priority
+                />
+              </div>
 
-            <div className="flex space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  className={`px-3 py-2 text-sm font-medium relative ${
-                    activeTab === tab.id
-                      ? 'text-[#FFB800]'
-                      : 'text-gray-300 hover:text-gray-100'
-                  }`}
-                  onClick={() => handleTabClick(tab.id)}
+              <div className="md:hidden">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                  className="text-gray-300 hover:text-gray-100"
                 >
-                  {tab.label}
-                  {tab.count && tab.count > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FFB800] text-black text-xs font-medium rounded-full flex items-center justify-center">
-                      {tab.count}
-                    </span>
+                  {isMobileMenuOpen ? (
+                    <X className="h-6 w-6" />
+                  ) : (
+                    <Menu className="h-6 w-6" />
                   )}
-                </button>
-              ))}
+                </Button>
+              </div>
+
+              <div className="hidden md:flex items-center space-x-4">
+                <div className="flex space-x-8">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      className={`px-3 py-2 text-sm font-medium relative ${
+                        activeTab === tab.id
+                          ? 'text-[#FFB800]'
+                          : 'text-gray-300 hover:text-gray-100'
+                      }`}
+                      onClick={() => handleTabClick(tab.id)}
+                    >
+                      {tab.label}
+                      {tab.count && tab.count > 0 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FFB800] text-black text-xs font-medium rounded-full flex items-center justify-center">
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <Button 
+                  className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
+                  onClick={() => router.push('/login')}
+                >
+                  Login
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center space-x-2 text-gray-300 hover:text-gray-100">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-black font-medium">
+                        {profile.fullName.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <span className="text-sm font-medium">{profile.fullName}</span>
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>Settings</DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-red-500">
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 text-gray-300 hover:text-gray-100">
+            <div className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'} py-4`}>
+              <div className="flex flex-col space-y-4">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    className={`px-3 py-2 text-sm font-medium relative ${
+                      activeTab === tab.id
+                        ? 'text-[#FFB800]'
+                        : 'text-gray-300 hover:text-gray-100'
+                    }`}
+                    onClick={() => {
+                      handleTabClick(tab.id);
+                      setIsMobileMenuOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>{tab.label}</span>
+                      {tab.count && tab.count > 0 && (
+                        <span className="ml-2 w-5 h-5 bg-[#FFB800] text-black text-xs font-medium rounded-full flex items-center justify-center">
+                          {tab.count}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+                
+                <Button 
+                  className="w-full bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
+                  onClick={() => router.push('/login')}
+                >
+                  Login
+                </Button>
+
+                <div className="pt-4 border-t border-gray-700">
+                  <div className="flex items-center space-x-3 px-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-black font-medium">
                       {profile.fullName.split(' ').map(n => n[0]).join('')}
                     </div>
-                    <span className="text-sm font-medium">{profile.fullName}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem onClick={() => setProfileDialogOpen(true)}>
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500">
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="flex-1 container mx-auto px-4 py-6">
-        <div className="mb-6 flex items-center justify-between gap-4">
-          <div className="relative w-1/3">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <Input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-[#2a2d35] border-gray-700 text-gray-200 placeholder-gray-400"
-            />
-          </div>
-          <div className="flex gap-3">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black">
-                  <Plus className="h-5 w-5 mr-2" />
-                  New Document
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
-                <DropdownMenuItem 
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center"
-                >
-                  <FilePlus className="h-4 w-4 mr-2" />
-                  Blank Document
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-700" />
-                <div className="p-2">
-                  <div className="flex items-center mb-2 px-2 text-sm font-medium text-gray-400">
-                    <Library className="h-4 w-4 mr-2" />
-                    From Template
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-200">{profile.fullName}</p>
+                      <p className="text-xs text-gray-400">{profile.email}</p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    {templates.map((template) => (
-                      <button
-                        key={template.id}
-                        className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-700/50 flex items-center text-gray-200"
-                        onClick={() => handleTemplateSelect(template)}
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2 text-[#FFB800]" />
-                        {template.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu open={templateLibraryOpen} onOpenChange={setTemplateLibraryOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                >
-                  <FileText className="h-5 w-5 mr-2" />
-                  Add Template
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-72 bg-[#2a2d35] border-gray-700">
-                <DropdownMenuItem 
-                  onClick={() => {
-                    setTemplateLibraryOpen(false);
-                    setTemplateDialogOpen(true);
-                  }}
-                  className="flex items-center"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload New Template
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-700" />
-                <div className="p-2">
-                  <div className="flex items-center mb-2 px-2 text-sm font-medium text-gray-400">
-                    <Library className="h-4 w-4 mr-2" />
-                    Template Library
-                  </div>
-                  <div className="space-y-1">
-                    {templates.map((template) => (
-                      <button
-                        key={template.id}
-                        className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-700/50 flex items-center text-gray-200"
-                        onClick={() => {
-                          setSelectedTemplate(template);
-                          setIsViewingTemplate(true);
-                          setTemplateLibraryOpen(false);
-                          setTemplateDialogOpen(true);
-                        }}
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2 text-[#FFB800]" />
-                        {template.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <DropdownMenu open={clauseLibraryOpen} onOpenChange={setClauseLibraryOpen}>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                >
-                  <Puzzle className="h-5 w-5 mr-2" />
-                  Add Clause
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-72 bg-[#2a2d35] border-gray-700">
-                <DropdownMenuItem 
-                  onClick={() => {
-                    setClauseLibraryOpen(false);
-                    setClauseDialogOpen(true);
-                  }}
-                  className="flex items-center"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload New Clause
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-gray-700" />
-                <div className="p-2">
-                  <div className="flex items-center mb-2 px-2 text-sm font-medium text-gray-400">
-                    <Library className="h-4 w-4 mr-2" />
-                    Clause Library
-                  </div>
-                  <div className="space-y-1">
-                    {clauses.map((clause) => (
-                      <button
-                        key={clause.id}
-                        className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-gray-700/50 flex items-center text-gray-200"
-                        onClick={() => {
-                          setSelectedClause(clause);
-                          setIsViewingClause(true);
-                          setClauseLibraryOpen(false);
-                          setClauseDialogOpen(true);
-                        }}
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2 text-[#FFB800]" />
-                        {clause.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {isEditing ? (
-          <div className="bg-[#2a2d35] rounded-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-200">New Document</h2>
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setDocumentContent('');
-                  }}
-                  className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={() => setSaveDialogOpen(true)}
-                  className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-                >
-                  Save Document
-                </Button>
-              </div>
-            </div>
-            <DocumentEditor
-              content={documentContent}
-              onChange={setDocumentContent}
-            />
-          </div>
-        ) : (
-          <div className="bg-[#2a2d35] rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-b border-gray-700">
-                  <TableHead className="text-gray-300 font-medium">DocID</TableHead>
-                  <TableHead className="text-gray-300 font-medium">Title</TableHead>
-                  <TableHead className="text-gray-300 font-medium">Created Date</TableHead>
-                  <TableHead className="text-gray-300 font-medium">Status</TableHead>
-                  <TableHead className="text-gray-300 font-medium">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documents.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-gray-400 py-8">
-                      No documents found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  documents.map((doc) => (
-                    <TableRow key={doc.docId} className="border-b border-gray-700">
-                      <TableCell className="text-gray-300">{doc.docId}</TableCell>
-                      <TableCell className="text-gray-300">{doc.title}</TableCell>
-                      <TableCell className="text-gray-300">
-                        {new Date(doc.createdDate).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-gray-300">{doc.status}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDocumentContent(doc.content || '');
-                            setIsEditing(true);
-                          }}
-                          className="text-[#FFB800] hover:text-[#FFB800]/90"
-                        >
-                          Edit
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </main>
-
-      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Profile</DialogTitle>
-            <DialogDescription>
-              Update your profile information
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleProfileUpdate}>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="fullName">
-                  <User className="h-4 w-4 inline mr-2" />
-                  Full Name
-                </Label>
-                <Input
-                  id="fullName"
-                  value={profile.fullName}
-                  onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
-                  className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">
-                  <Mail className="h-4 w-4 inline mr-2" />
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={profile.email}
-                  onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                  className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="company">
-                  <Building className="h-4 w-4 inline mr-2" />
-                  Company
-                </Label>
-                <Input
-                  id="company"
-                  value={profile.company}
-                  onChange={(e) => setProfile({ ...profile, company: e.target.value })}
-                  className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="position">
-                  <Briefcase className="h-4 w-4 inline mr-2" />
-                  Position
-                </Label>
-                <Input
-                  id="position"
-                  value={profile.position}
-                  onChange={(e) => setProfile({ ...profile, position: e.target.value })}
-                  className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                type="submit"
-                className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-              >
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {isViewingTemplate ? (selectedTemplate?.name || 'View Template') : 'Add Template'}
-            </DialogTitle>
-            <DialogDescription>
-              {isViewingTemplate
-                ? 'View and edit the template content'
-                : 'Upload a PDF file to add it to your template library.'}
-            </DialogDescription>
-          </DialogHeader>
-          {isViewingTemplate ? (
-            <div className="grid gap-4 py-4">
-              <DocumentEditor
-                content={selectedTemplate?.content || ''}
-                onChange={(content) => {
-                  if (selectedTemplate) {
-                    setSelectedTemplate({ ...selectedTemplate, content });
-                  }
-                }}
-              />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedTemplate(null);
-                    setIsViewingTemplate(false);
-                    setTemplateDialogOpen(false);
-                  }}
-                  className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={handleTemplateUpload}
-                  className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black " >
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="grid gap-4 py-4">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                  ${isDragActive ? 'border-[#FFB800] bg-[#FFB800]/10' : 'border-gray-600 hover:border-gray-500'}
-                  ${uploadedFile ? 'bg-green-500/10 border-green-500' : ''}`}
-              >
-                <input {...getInputProps()} />
-                {uploadedFile ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <FileText className="h-5 w-5 text-green-500" />
-                    <span className="text-green-500">{uploadedFile.name}</span>
+                  <div className="mt-4 space-y-2">
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUploadedFile(null);
+                      className="w-full justify-start text-gray-300 hover:text-gray-100"
+                      onClick={() => {
+                        setProfileDialogOpen(true);
+                        setIsMobileMenuOpen(false);
                       }}
                     >
-                      <X className="h-4 w-4" />
+                      Profile
                     </Button>
-                  </div>
-                ) : isDragActive ? (
-                  <div className="text-[#FFB800]">
-                    <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <p>Drop the PDF file here</p>
-                  </div>
-                ) : (
-                  <div className="text-gray-400">
-                    <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <p>Drag & drop a PDF file here, or click to select</p>
-                  </div>
-                )}
-              </div>
-              <Button
-                onClick={handleTemplateUpload}
-                disabled={!uploadedFile}
-                className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-              >
-                Upload Template
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={clauseDialogOpen} onOpenChange={setClauseDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {isViewingClause ? (selectedClause?.name || 'View Clause') : 'Add Clause'}
-            </DialogTitle>
-            <DialogDescription>
-              {isViewingClause
-                ? 'View and edit the clause content'
-                : 'Upload a PDF file to add it to your clause library.'}
-            </DialogDescription>
-          </DialogHeader>
-          {isViewingClause ? (
-            <div className="grid gap-4 py-4">
-              <DocumentEditor
-                content={selectedClause?.content || ''}
-                onChange={(content) => {
-                  if (selectedClause) {
-                    setSelectedClause({ ...selectedClause, content });
-                  }
-                }}
-              />
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSelectedClause(null);
-                    setIsViewingClause(false);
-                    setClauseDialogOpen(false);
-                  }}
-                  className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                >
-                  Close
-                </Button>
-                <Button
-                  onClick={handleClauseUpload}
-                  className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-                >
-                  Save Changes
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="grid gap-4 py-4">
-              <div
-                {...getRootProps()}
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors
-                  ${isDragActive ? 'border-[#FFB800] bg-[#FFB800]/10' : 'border-gray-600 hover:border-gray-500'}
-                  ${uploadedFile ? 'bg-green-500/10 border-green-500' : ''}`}
-              >
-                <input {...getInputProps()} />
-                {uploadedFile ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <FileText className="h-5 w-5 text-green-500" />
-                    <span className="text-green-500">{uploadedFile.name}</span>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setUploadedFile(null);
-                      }}
+                      className="w-full justify-start text-gray-300 hover:text-gray-100"
                     >
-                      <X className="h-4 w-4" />
+                      Settings
                     </Button>
-                  </div>
-                ) : isDragActive ? (
-                  <div className="text-[#FFB800]">
-                    <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <p>Drop the PDF file here</p>
-                  </div>
-                ) : (
-                  <div className="text-gray-400">
-                    <Upload className="h-8 w-8 mx-auto mb-2" />
-                    <p>Drag & drop a PDF file here, or click to select</p>
-                  </div>
-                )}
-              </div>
-              <Button
-                onClick={handleClauseUpload}
-                disabled={!uploadedFile}
-                className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-              >
-                Upload Clause
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Save Document</DialogTitle>
-            <DialogDescription>
-              Enter document details and metadata
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="title">Document Title *</Label>
-              <Input
-                id="title"
-                value={documentTitle}
-                onChange={(e) => setDocumentTitle(e.target.value)}
-                placeholder="Enter document title"
-                className="bg-[#2a2d35] border-gray-700 text-gray-200"
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={documentDescription}
-                onChange={(e) => setDocumentDescription(e.target.value)}
-                placeholder="Enter document description"
-                className="bg-[#2a2d35] border-gray-700 text-gray-200"
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={documentCategory} onValueChange={setDocumentCategory}>
-                <SelectTrigger className="bg-[#2a2d35] border-gray-700 text-gray-200">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category} value={category.toLowerCase()}>
-                      {category}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <div className="flex gap-2 items-center">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={documentDueDate}
-                  onChange={(e) => setDocumentDueDate(e.target.value)}
-                  className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Collaborators</Label>
-              <div className="space-y-2">
-                {collaborators.map((collaborator, index) => (
-                  <div key={index} className="flex items-center gap-2 bg-gray-700/30 p-2 rounded">
-                    <User className="h-4 w-4 text-gray-400" />
-                    <span className="text-gray-200">{collaborator.email}</span>
-                    <span className="text-gray-400">({collaborator.role})</span>
                     <Button
                       variant="ghost"
-                      size="icon"
-                      className="ml-auto h-6 w-6"
-                      onClick={() => handleRemoveCollaborator(collaborator.email)}
+                      className="w-full justify-start text-red-500 hover:text-red-600"
                     >
-                      <X className="h-4 w-4" />
+                      Sign Out
                     </Button>
                   </div>
-                ))}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Email"
-                    className="bg-[#2a2d35] border-gray-700 text-gray-200"
-                    id="collaboratorEmail"
-                  />
-                  <Select defaultValue="viewer">
-                    <SelectTrigger className="bg-[#2a2d35] border-gray-700 text-gray-200 w-32">
-                      <SelectValue placeholder="Role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                      <SelectItem value="editor">Editor</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                    </SelectContent>
-                  </Select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <main className="flex-1 container mx-auto px-4 py-6">
+          {editingDocument ? (
+            <div className="bg-[#2a2d35] rounded-lg p-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="ghost"
+                      onClick={() => setEditingDocument(null)}
+                      className="text-gray-300 hover:text-gray-100"
+                    >
+                      <ArrowLeft className="h-4 w-4 mr-2" />
+                      Back
+                    </Button>
+                    <h2 className="text-xl font-semibold text-gray-200">{editingDocument.title}</h2>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleRevokeDocument}
+                      className="border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                    >
+                      Revoke Changes
+                    </Button>
+                    <Button
+                      onClick={handleUpdateDocument}
+                      className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
+                    >
+                      Update Document
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
                   <Button
                     variant="outline"
+                    onClick={() => setShowHistory(!showHistory)}
                     className="border-gray-700 text-gray-200 hover:bg-gray-700"
-                    onClick={() => {
-                      const emailInput = document.getElementById('collaboratorEmail') as HTMLInputElement;
-                      const email = emailInput.value;
-                      const roleSelect = document.querySelector('[data-value]') as HTMLElement;
-                      const role = roleSelect?.getAttribute('data-value') || 'viewer';
-                      if (email) {
-                        handleAddCollaborator(email, role);
-                        emailInput.value = '';
-                      }
-                    }}
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <History className="h-4 w-4 mr-2" />
+                    {showHistory ? 'Hide History' : 'Show History'}
                   </Button>
                 </div>
+
+                {showHistory && (
+                  <div className="p-4 bg-[#1a1d21] rounded-lg border border-gray-700">
+                    <h3 className="text-sm font-medium text-gray-200 mb-4">Document History</h3>
+                    <div className="space-y-4">
+                      {editingDocument.history?.map((event, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-[#2a2d35] border border-gray-700"
+                        >
+                          <div className="mt-1">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-200">
+                                {event.user}
+                              </span>
+                              <span className="text-xs text-gray-400">•</span>
+                              <span className="text-xs text-gray-400">
+                                {event.timestamp}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-300 mt-1">
+                              <span className={`font-medium ${
+                                event.action === 'approved' ? 'text-green-500' :
+                                event.action === 'revoked' ? 'text-red-500' :
+                                'text-blue-500'
+                              }`}>
+                                {event.action.charAt(0).toUpperCase() + event.action.slice(1)}
+                              </span>
+                              {event.details && ` - ${event.details}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 bg-[#1a1d21] rounded-lg border border-gray-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-200">Collaborators</h3>
+                    <Button variant="ghost" size="sm" className="text-gray-400 hover:text-gray-200">
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add
+                    </Button>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    {editingDocument.collaborators.map((collaborator, index) => {
+                      const status = getApprovalStatus(collaborator);
+                      return (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-[#2a2d35] border border-gray-700"
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-[#FFB800]/10 text-[#FFB800] text-sm">
+                              {getInitials(collaborator.email)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm text-gray-200">{collaborator.email}</span>
+                            <span className="text-xs text-gray-400 capitalize">{collaborator.role}</span>
+                          </div>
+                          <Badge
+                            variant="outline"
+                            className={`ml-2 ${status.color}`}
+                          >
+                            {status.label}
+                          </Badge>
+                          <div className="flex gap-2 ml-2">
+                            {status.showActions && (
+                              <>
+                                {!collaborator.approved ? (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleApproveDocument(collaborator)}
+                                    className="bg-green-500/10 hover:bg-green-500/20 text-green-500 h-7 px-2 text-xs"
+                                  >
+                                    Approve
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRevokeApproval(collaborator)}
+                                    className="bg-red-500/10 hover:bg-red-500/20 text-red-500 h-7 px-2 text-xs"
+                                  >
+                                    Revoke
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleRemoveCollaborator(collaborator.email)}
+                                  className="bg-gray-500/10 hover:bg-gray-500/20 text-gray-400 hover:text-gray-200 h-7 w-7 p-0"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                <DocumentEditor
+                  content={documentContent}
+                  onChange={setDocumentContent}
+                />
               </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setSaveDialogOpen(false)}
-              className="border-gray-700 text-gray-200 hover:bg-gray-700"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveDocument}
-              disabled={!documentTitle.trim()}
-              className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-            >
-              Save Document
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ) : (
+            <>
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div className="relative w-1/3">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+                  <Input
+                    type="text"
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-[#2a2d35] border-gray-700 text-gray-200 placeholder-gray-400"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black">
+                        <Plus className="h-5 w-5 mr-2" />
+                        New Document
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
+                      <DropdownMenuItem 
+                        onClick={() => router.push('/newDoc')}
+                        className="flex items-center"
+                      >
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        Blank Document
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-700" />
+                      <DropdownMenuItem className="flex items-center">
+                        <FileCheck className="h-4 w-4 mr-2" />
+                        Sales Agreement
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <FileSparkles className="h-4 w-4 mr-2" />
+                        Service Contract
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <FileCode className="h-4 w-4 mr-2" />
+                        NDA Template
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
-      <Dialog open={notificationsDialogOpen} onOpenChange={setNotificationsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Notifications</DialogTitle>
-          </DialogHeader>
-          <Tabs defaultValue="contracts" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="contracts" className="relative">
-                <span className="pr-6">Contracts</span>
-                {unreadContractNotifications > 0 && (
-                  <span className="absolute top-1/2 -translate-y-1/2 right-2 w-5 h-5 bg-[#FFB800] text-black text-xs font-medium rounded-full flex items-center justify-center">
-                    {unreadContractNotifications}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="messages" className="relative">
-                <span className="pr-6">Messages</span>
-                {unreadMessageNotifications > 0 && (
-                  <span className="absolute top-1/2 -translate-y-1/2 right-2 w-5 h-5 bg-[#FFB800] text-black text-xs font-medium rounded-full flex items-center justify-center">
-                    {unreadMessageNotifications}
-                  </span>
-                )}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="contracts" className="mt-4 space-y-4">
-              {mockContractNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 rounded-lg border ${
-                    notification.read ? 'bg-gray-800/30 border-gray-700' : 'bg-[#FFB800]/5 border-[#FFB800]/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className={`text-sm font-medium ${notification.read ? 'text-gray-300' : 'text-[#FFB800]'}`}>
-                        {notification.title}
-                      </h3>
-                      <p className="text-sm text-gray-400 mt-1">{notification.document}</p>
-                    </div>
-                    <span className="text-xs text-gray-500">{notification.timestamp}</span>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="border-gray-700 text-gray-200 hover:bg-gray-700"
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Add Template
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
+                      <DropdownMenuItem 
+                        onClick={() => router.push('/newTemplate')}
+                        className="flex items-center"
+                      >
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        Blank Template
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-700" />
+                      <DropdownMenuItem className="flex items-center">
+                        <FileCheck className="h-4 w-4 mr-2" />
+                        Import Template
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <FileSparkles className="h-4 w-4 mr-2" />
+                        From Document
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className="border-gray-700 text-gray-200 hover:bg-gray-700"
+                      >
+                        <Puzzle className="h-5 w-5 mr-2" />
+                        Add Clause
+                        <ChevronDown className="h-4 w-4 ml-2" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
+                      <DropdownMenuItem 
+                        onClick={() => router.push('/newClause')}
+                        className="flex items-center"
+                      >
+                        <FilePlus className="h-4 w-4 mr-2" />
+                        New Clause
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-gray-700" />
+                      <DropdownMenuItem className="flex items-center">
+                        <FileCheck className="h-4 w-4 mr-2" />
+                        From Template
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <FileSparkles className="h-4 w-4 mr-2" />
+                        From Document
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              ))}
-            </TabsContent>
-            <TabsContent value="messages" className="mt-4 space-y-4">
-              {mockMessageNotifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`p-4 rounded-lg border ${
-                    notification.read ? 'bg-gray-800/30 border-gray-700' : 'bg-[#FFB800]/5 border-[#FFB800]/30'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className={`text-sm font-medium ${notification.read ? 'text-gray-300' : 'text-[#FFB800]'}`}>
-                        {notification.sender}
-                      </h3>
-                      <p className="text-sm text-gray-400 mt-1">{notification.message}</p>
-                    </div>
-                    <span className="text-xs text-gray-500">{notification.timestamp}</span>
-                  </div>
+              </div>
+
+              <div className="bg-[#2a2d35] rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-b border-gray-700">
+                      <TableHead className="text-gray-300 font-medium">DocID</TableHead>
+                      <TableHead className="text-gray-300 font-medium">Title</TableHead>
+                      <TableHead className="text-gray-300 font-medium">Created Date</TableHead>
+                      <TableHead className="text-gray-300 font-medium">Status</TableHead>
+                      <TableHead className="text-gray-300 font-medium">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {documents.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                          No documents found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      documents.map((doc) => (
+                        <TableRow key={doc.docId} className="border-b border-gray-700">
+                          <TableCell className="text-gray-300">{doc.docId}</TableCell>
+                          <TableCell className="text-gray-300">{doc.title}</TableCell>
+                          <TableCell className="text-gray-300">
+                            {new Date(doc.createdDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-gray-300">{doc.status}</TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditDocument(doc)}
+                              className="text-[#FFB800] hover:text-[#FFB800]/90"
+                            >
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </main>
+
+        <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Profile</DialogTitle>
+              <DialogDescription>
+                Update your profile information
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleProfileUpdate}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="fullName">
+                    <User className="h-4 w-4 inline mr-2" />
+                    Full Name
+                  </Label>
+                  <Input
+                    id="fullName"
+                    value={profile.fullName}
+                    onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                    className="bg-[#2a2d35] border-gray-700 text-gray-200"
+                  />
                 </div>
-              ))}
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-    </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email">
+                    <Mail className="h-4 w-4 inline mr-2" />
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={profile.email}
+                    onChange={(e) => setProfile({ ...profile, email: e.target.value })}
+                    className="bg-[#2a2d35] border-gray-700 text-gray-200"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="company">
+                    <Building className="h-4 w-4 inline mr-2" />
+                    Company
+                  </Label>
+                  <Input
+                    id="company"
+                    value={profile.company}
+                    onChange={(e) => setProfile({ ...profile, company: e.target.value })}
+                    className="bg-[#2a2d35] border-gray-700 text-gray-200"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black">
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </>
   );
 }

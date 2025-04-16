@@ -49,6 +49,12 @@ export function DocumentEditor({ content = '', onChange }: DocumentEditorProps) 
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
     },
+    editorProps: {
+      attributes: {
+        class: 'prose prose-invert max-w-none',
+      },
+    },
+    immediatelyRender: false,
   });
 
   if (!editor) {

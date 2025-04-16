@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { 
   Database, Shield, FileText, Network, Cloud, Lock, CheckCircle2, XCircle,
-  KeyRound, Workflow, AppWindow, Search, Settings, Scale,
+  KeyRound, Workflow, AppWindow, Search, Settings, Scale, Menu, X
 } from "lucide-react";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
@@ -18,6 +18,7 @@ interface FeatureCardProps {
 
 export default function Home() {
   const router = useRouter();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,12 +36,45 @@ export default function Home() {
                 priority
               />
             </div>
+            
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="text-foreground"
+              >
+                {isMobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </Button>
+            </div>
+
+            {/* Desktop navigation */}
             <div className="hidden md:flex gap-4">
               <Button variant="ghost">Features</Button>
               <Button variant="ghost">Compare</Button>
               <Button variant="ghost">About</Button>
               <Button 
                 className="bg-chart-1/90 hover:bg-chart-1 text-white"
+                onClick={() => router.push('/login')}
+              >
+                Login
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile navigation */}
+          <div className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'} py-4`}>
+            <div className="flex flex-col space-y-4">
+              <Button variant="ghost" className="w-full justify-start">Features</Button>
+              <Button variant="ghost" className="w-full justify-start">Compare</Button>
+              <Button variant="ghost" className="w-full justify-start">About</Button>
+              <Button 
+                className="w-full bg-chart-1/90 hover:bg-chart-1 text-white"
                 onClick={() => router.push('/login')}
               >
                 Login

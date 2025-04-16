@@ -235,7 +235,7 @@ export default function Dashboard() {
   const [documentContent, setDocumentContent] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   const [profile, setProfile] = useState({
     fullName: "John Doe",
     email: "john.doe@example.com",
@@ -250,18 +250,18 @@ export default function Dashboard() {
   const tabs = [
     { id: 'my-documents', label: 'My Documents' },
     { id: 'shared-documents', label: 'Shared Documents' },
-    { 
-      id: 'notifications', 
+    {
+      id: 'notifications',
       label: 'Notifications',
-      count: unreadNotificationsCount 
+      count: unreadNotificationsCount
     },
   ];
 
   const handleApproveDocument = (collaborator: Collaborator) => {
     if (!editingDocument) return;
 
-    const updatedCollaborators = editingDocument.collaborators.map(c => 
-      c.email === collaborator.email 
+    const updatedCollaborators = editingDocument.collaborators.map(c =>
+      c.email === collaborator.email
         ? { ...c, approved: true }
         : c
     );
@@ -279,9 +279,9 @@ export default function Dashboard() {
       history: [newHistory, ...(editingDocument.history || [])]
     };
 
-    setDocuments(documents.map(doc => 
-      doc.docId === editingDocument.docId 
-        ? updatedDocument 
+    setDocuments(documents.map(doc =>
+      doc.docId === editingDocument.docId
+        ? updatedDocument
         : doc
     ));
 
@@ -292,8 +292,8 @@ export default function Dashboard() {
   const handleRevokeApproval = (collaborator: Collaborator) => {
     if (!editingDocument) return;
 
-    const updatedCollaborators = editingDocument.collaborators.map(c => 
-      c.email === collaborator.email 
+    const updatedCollaborators = editingDocument.collaborators.map(c =>
+      c.email === collaborator.email
         ? { ...c, approved: false }
         : c
     );
@@ -311,9 +311,9 @@ export default function Dashboard() {
       history: [newHistory, ...(editingDocument.history || [])]
     };
 
-    setDocuments(documents.map(doc => 
-      doc.docId === editingDocument.docId 
-        ? updatedDocument 
+    setDocuments(documents.map(doc =>
+      doc.docId === editingDocument.docId
+        ? updatedDocument
         : doc
     ));
 
@@ -333,9 +333,9 @@ export default function Dashboard() {
       collaborators: updatedCollaborators
     };
 
-    setDocuments(documents.map(doc => 
-      doc.docId === editingDocument.docId 
-        ? updatedDocument 
+    setDocuments(documents.map(doc =>
+      doc.docId === editingDocument.docId
+        ? updatedDocument
         : doc
     ));
 
@@ -345,25 +345,25 @@ export default function Dashboard() {
 
   const getApprovalStatus = (collaborator: Collaborator) => {
     if (collaborator.role.toLowerCase() === 'viewer') {
-      return { 
-        label: 'Not Required', 
+      return {
+        label: 'Not Required',
         color: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-        showActions: false 
+        showActions: false
       };
     }
 
     if (collaborator.approved) {
-      return { 
-        label: 'Approved', 
+      return {
+        label: 'Approved',
         color: 'bg-green-500/10 text-green-500 border-green-500/20',
-        showActions: true 
+        showActions: true
       };
     }
 
-    return { 
-      label: 'Pending', 
+    return {
+      label: 'Pending',
       color: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-      showActions: true 
+      showActions: true
     };
   };
 
@@ -414,9 +414,9 @@ export default function Dashboard() {
       history: [newHistory, ...(editingDocument.history || [])]
     };
 
-    setDocuments(documents.map(doc => 
-      doc.docId === editingDocument.docId 
-        ? updatedDocument 
+    setDocuments(documents.map(doc =>
+      doc.docId === editingDocument.docId
+        ? updatedDocument
         : doc
     ));
 
@@ -462,17 +462,15 @@ export default function Dashboard() {
                   )}
                 </Button>
               </div>
-
-              <div className="hidden md:flex items-center space-x-4">
+              <div className='hidden md:flex items-center'>
                 <div className="flex space-x-8">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
-                      className={`px-3 py-2 text-sm font-medium relative ${
-                        activeTab === tab.id
-                          ? 'text-[#FFB800]'
-                          : 'text-gray-300 hover:text-gray-100'
-                      }`}
+                      className={`px-3 py-2 text-sm font-medium relative ${activeTab === tab.id
+                        ? 'text-[#FFB800]'
+                        : 'text-gray-300 hover:text-gray-100'
+                        }`}
                       onClick={() => handleTabClick(tab.id)}
                     >
                       {tab.label}
@@ -484,14 +482,8 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
-
-                <Button 
-                  className="bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-                  onClick={() => router.push('/login')}
-                >
-                  Login
-                </Button>
-
+              </div>
+              <div className="hidden md:flex items-center space-x-4">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center space-x-2 text-gray-300 hover:text-gray-100">
@@ -521,11 +513,10 @@ export default function Dashboard() {
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
-                    className={`px-3 py-2 text-sm font-medium relative ${
-                      activeTab === tab.id
-                        ? 'text-[#FFB800]'
-                        : 'text-gray-300 hover:text-gray-100'
-                    }`}
+                    className={`px-3 py-2 text-sm font-medium relative ${activeTab === tab.id
+                      ? 'text-[#FFB800]'
+                      : 'text-gray-300 hover:text-gray-100'
+                      }`}
                     onClick={() => {
                       handleTabClick(tab.id);
                       setIsMobileMenuOpen(false);
@@ -541,14 +532,6 @@ export default function Dashboard() {
                     </div>
                   </button>
                 ))}
-                
-                <Button 
-                  className="w-full bg-[#FFB800] hover:bg-[#FFB800]/90 text-black"
-                  onClick={() => router.push('/login')}
-                >
-                  Login
-                </Button>
-
                 <div className="pt-4 border-t border-gray-700">
                   <div className="flex items-center space-x-3 px-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] flex items-center justify-center text-black font-medium">
@@ -656,11 +639,10 @@ export default function Dashboard() {
                               </span>
                             </div>
                             <p className="text-sm text-gray-300 mt-1">
-                              <span className={`font-medium ${
-                                event.action === 'approved' ? 'text-green-500' :
+                              <span className={`font-medium ${event.action === 'approved' ? 'text-green-500' :
                                 event.action === 'revoked' ? 'text-red-500' :
-                                'text-blue-500'
-                              }`}>
+                                  'text-blue-500'
+                                }`}>
                                 {event.action.charAt(0).toUpperCase() + event.action.slice(1)}
                               </span>
                               {event.details && ` - ${event.details}`}
@@ -770,7 +752,7 @@ export default function Dashboard() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => router.push('/newDoc')}
                         className="flex items-center"
                       >
@@ -795,8 +777,8 @@ export default function Dashboard() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="border-gray-700 text-gray-200 hover:bg-gray-700"
                       >
                         <FileText className="h-5 w-5 mr-2" />
@@ -805,7 +787,7 @@ export default function Dashboard() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => router.push('/newTemplate')}
                         className="flex items-center"
                       >
@@ -826,8 +808,8 @@ export default function Dashboard() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="border-gray-700 text-gray-200 hover:bg-gray-700"
                       >
                         <Puzzle className="h-5 w-5 mr-2" />
@@ -836,7 +818,7 @@ export default function Dashboard() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56 bg-[#2a2d35] border-gray-700">
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => router.push('/newClause')}
                         className="flex items-center"
                       >

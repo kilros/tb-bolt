@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Search, ChevronDown, Plus, FileText, Puzzle, X, Library, FolderOpen, Building, Briefcase, Mail, User, FileEdit, MessageSquare, FilePlus, Calendar, UserPlus, ArrowLeft, History, Clock, Menu, FileCheck, Sparkles as FileSparkles, FileCode } from 'lucide-react';
+import { Search, ChevronDown, Plus, FileText, Puzzle, X, Library, FolderOpen, Building, Briefcase, Mail, User, FileEdit, MessageSquare, FilePlus, Calendar, UserPlus, ArrowLeft, History, Clock, Menu, FileCheck, Sparkles as FileSparkles, FileCode, MessageCircle } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from 'next/navigation';
@@ -35,6 +35,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentEditor } from '@/components/document-editor';
+import { ChatModal } from '@/components/chat-modal';
 import { toast } from "sonner";
 
 interface DocumentHistory {
@@ -235,6 +236,7 @@ export default function Dashboard() {
   const [documentContent, setDocumentContent] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const [profile, setProfile] = useState({
     fullName: "John Doe",
@@ -886,6 +888,18 @@ export default function Dashboard() {
           )}
         </main>
 
+        {editingDocument && (
+          <div className="fixed bottom-6 right-6">
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full bg-gradient-to-r from-[#FFB800] to-[#FF8A00] hover:from-[#FFB800]/90 hover:to-[#FF8A00]/90 text-black shadow-lg"
+              onClick={() => setIsChatOpen(true)}
+            >
+              <MessageCircle className="h-6 w-6" />
+            </Button>
+          </div>
+        )}
+
         <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -942,6 +956,8 @@ export default function Dashboard() {
             </form>
           </DialogContent>
         </Dialog>
+
+        <ChatModal open={isChatOpen} onOpenChange={setIsChatOpen} />
       </div>
     </>
   );

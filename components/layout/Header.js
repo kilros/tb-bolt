@@ -77,7 +77,7 @@ export default function Header() {
       setIsAuth(address == res.data);
     } catch (error) {
       toast.error("Error fetching user info");
-      window.location.href = "/login";
+      // window.location.href = "/login";
     }
 
     const userData = await web3Auth.getUserInfo();

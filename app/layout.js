@@ -1,5 +1,4 @@
 import "./globals.css";
-// import Footer from "@/components/layout/Footer";
 import TBProvider from "./provider";
 
 export const metadata = {

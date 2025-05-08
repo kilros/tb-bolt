@@ -86,9 +86,35 @@
   }
   body {
     @apply bg-background text-foreground;
+    counter-reset: page;
   }
 }
 
+.contract-page {
+  width: 7.5in;
+  height: 14in;
+  padding: 0.5in;
+  margin: 2rem auto;
+  position: relative;
+  background: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  page-break-after: always;
+  counter-increment: page;
+}
+
+.contract-page-content {
+  height: 100%;
+}
+
+.contract-page::after {
+  content: counter(page);
+  position: absolute;
+  bottom: 0.5in;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #666;
+}
 
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
@@ -177,13 +203,13 @@ blockquote {
   margin-inline-start: 40px;
   margin-inline-end: 40px;
 }
+
 .textArea {
   height: 1.5rem;
   overflow: hidden;
 }
 
 .chatmodal {
-
   /* Hide scrollbar for Chrome, Safari and Opera */
   &::-webkit-scrollbar {
     display: none;

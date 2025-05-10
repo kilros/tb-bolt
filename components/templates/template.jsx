@@ -1,4 +1,3 @@
-"use client"
 import ReactLoading from "react-loading";
 import { createRef, useEffect, useRef, useState } from "react";
 import { Toolbar } from "./components";
@@ -26,6 +25,7 @@ export default function Template({
   const [isOpenList, setIsOpenList] = useState(false);
   const [isOpenRemove, setIsOpenRemove] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
+  const [pageInput, setPageInput] = useState("");
 
   const handleMouseOver = (idx) => {
     setOverStatus((prev) => ({
@@ -102,135 +102,124 @@ export default function Template({
     }
   };
 
-  const splitClause = (clause, remainingHeight) => {
-    let firstPart = [];
-    let secondPart = [];
-    let currentHeight = 0;
-
-    for (let node of clause) {
-      const nodeHeight = getNodeHeight(node);
-      
-      if (currentHeight + nodeHeight <= remainingHeight) {
-        firstPart.push(node);
-        currentHeight += nodeHeight;
-      } else {
-        // If the node is a list, try to split it
-        if (node.type === 'numbered-list' || node.type === 'bulleted-list') {
-          const { first, second } = splitList(node, remainingHeight - currentHeight);
-          if (first.children.length > 0) firstPart.push(first);
-          if (second.children.length > 0) secondPart.push(second);
-        } else {
-          secondPart.push(node);
-        }
-      }
-    }
-
-    return { firstPart, secondPart };
-  };
-
-  const splitList = (list, remainingHeight) => {
-    const first = { ...list, children: [] };
-    const second = { ...list, children: [] };
-    let currentHeight = 0;
-
-    for (let item of list.children) {
-      const itemHeight = getNodeHeight(item);
-      if (currentHeight + itemHeight <= remainingHeight) {
-        first.children.push(item);
-        currentHeight += itemHeight;
-      } else {
-        second.children.push(item);
-      }
-    }
-
-    return { first, second };
-  };
-
   const calculatePages = () => {
     const pages = [];
     let currentPage = [];
     let currentHeight = 0;
     const maxHeight = 12;
-    let processedContent = [];
-    let currentClauseIndex = 0;
+    let clauseIndex = 0;
 
-    while (currentClauseIndex < content.length) {
-      const clause = content[currentClauseIndex];
+    while (clauseIndex < content.length) {
+      const clause = content[clauseIndex];
       const clauseHeight = clause.reduce((acc, node) => acc + getNodeHeight(node), 0);
 
+      // Try to fit the entire clause
       if (currentHeight + clauseHeight <= maxHeight) {
-        currentPage.push(clause);
-        processedContent.push(clause);
+        currentPage.push({
+          content: clause,
+          originalIndex: clauseIndex,
+          isSplit: false
+        });
         currentHeight += clauseHeight;
-        currentClauseIndex++;
+        clauseIndex++;
       } else {
-        // Split the clause if it doesn't fit
-        const { firstPart, secondPart } = splitClause(clause, maxHeight - currentHeight);
-        
-        if (firstPart.length > 0) {
-          currentPage.push(firstPart);
-          processedContent.push(firstPart);
+        // Need to split the clause
+        let firstPart = [];
+        let secondPart = [];
+        let heightAccumulator = 0;
+
+        // First pass: collect nodes until we hit the height limit
+        for (let i = 0; i < clause.length; i++) {
+          const node = clause[i];
+          const nodeHeight = getNodeHeight(node);
+
+          if (heightAccumulator + nodeHeight <= maxHeight - currentHeight) {
+            firstPart.push(node);
+            heightAccumulator += nodeHeight;
+          } else {
+            // Add remaining nodes to second part
+            secondPart = clause.slice(i);
+            break;
+          }
         }
-        
+
+        // Add first part to current page if we have any content
+        if (firstPart.length > 0) {
+          currentPage.push({
+            content: firstPart,
+            originalIndex: clauseIndex,
+            isSplit: true,
+            isFirstPart: true
+          });
+        }
+
+        // Save current page if it has content
+        if (currentPage.length > 0) {
+          pages.push(currentPage);
+        }
+
+        // Start new page with second part
+        currentPage = [];
+        currentHeight = 0;
+
         if (secondPart.length > 0) {
-          pages.push([...currentPage]);
-          currentPage = [secondPart];
-          processedContent.push(secondPart);
+          currentPage = [{
+            content: secondPart,
+            originalIndex: clauseIndex,
+            isSplit: true,
+            isFirstPart: false
+          }];
           currentHeight = secondPart.reduce((acc, node) => acc + getNodeHeight(node), 0);
         }
-        
-        currentClauseIndex++;
+
+        clauseIndex++;
       }
 
-      // Start new page if current page is full
-      if (currentHeight >= maxHeight || currentClauseIndex === content.length) {
-        if (currentPage.length > 0) {
-          pages.push([...currentPage]);
-          currentPage = [];
-          currentHeight = 0;
-        }
+      // Start new page if current is full or we're at the end
+      if (currentHeight >= maxHeight || (clauseIndex === content.length && currentPage.length > 0)) {
+        pages.push(currentPage);
+        currentPage = [];
+        currentHeight = 0;
       }
     }
 
-    return { pages, processedContent };
+    return pages;
   };
 
-  const { pages, processedContent } = calculatePages();
+  const pages = calculatePages();
 
   const renderPage = (clauses, pageIndex) => (
     <div key={pageIndex} className="contract-page">
       <div className="contract-page-content">
-        {clauses.map((clause, index) => {
-          const globalIndex = processedContent.findIndex(c => 
-            JSON.stringify(c) === JSON.stringify(clause)
-          );
+        {clauses.map((clauseInfo, index) => {
+          const { content: clause, originalIndex } = clauseInfo;
           
-          if (!refs.current[globalIndex]) {
-            refs.current[globalIndex] = createRef();
+          if (!refs.current[originalIndex]) {
+            refs.current[originalIndex] = createRef();
           }
 
           return (
             <div 
               className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} 
-              onMouseOver={() => handleMouseOver(globalIndex)} 
-              onMouseLeave={() => handleMouseLeave(globalIndex)} 
-              key={`${processedContent.length}_${globalIndex}`}
-              ref={refs.current[globalIndex]}
+              onMouseOver={() => handleMouseOver(originalIndex)} 
+              onMouseLeave={() => handleMouseLeave(originalIndex)} 
+              key={`${originalIndex}_${index}`}
+              ref={refs.current[originalIndex]}
             >
               <Clause 
                 status={status} 
                 content={clause} 
                 setContent={updateClause} 
-                index={globalIndex} 
+                index={originalIndex} 
                 setEditor={setActiveEditor} 
                 readOnly={readOnly} 
               />
               {!readOnly && (
-                <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[globalIndex] ? "" : "hidden"}`}>
+                <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[originalIndex] ? "" : "hidden"}`}>
                   <button 
                     className="px-2 py-1 bg-red-600 hover:bg-red-400 rounded text-sm" 
                     onClick={() => {
-                      setCurrentIndex(globalIndex); 
+                      setCurrentIndex(originalIndex); 
                       setIsOpenRemove(true);
                     }}
                   >
@@ -240,7 +229,7 @@ export default function Template({
                     className="px-2 py-1 bg-blue-600 hover:bg-blue-400 rounded text-sm" 
                     onClick={() => { 
                       setOption(0); 
-                      setCurrentIndex(globalIndex); 
+                      setCurrentIndex(originalIndex); 
                       setIsOpenList(true);
                     }}
                   >
@@ -250,7 +239,7 @@ export default function Template({
                     className="px-2 py-1 bg-yellow-600 hover:bg-yellow-400 rounded text-sm" 
                     onClick={() => { 
                       setOption(1); 
-                      setCurrentIndex(globalIndex); 
+                      setCurrentIndex(originalIndex); 
                       setIsOpenList(true);
                     }}
                   >
@@ -261,6 +250,19 @@ export default function Template({
             </div>
           );
         })}
+        {pageIndex === pages.length - 1 && (status === 0 || status === 10) && (
+          <div className="flex items-center justify-center mt-8">
+            <button 
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-500 text-white rounded" 
+              onClick={() => { 
+                setOption(2); 
+                setIsOpenList(true);
+              }}
+            >
+              Add New Clause
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -268,6 +270,7 @@ export default function Template({
   const nextPage = () => {
     if (currentPage < pages.length - 1) {
       setCurrentPage(currentPage + 1);
+      setPageInput("");
       window.scrollTo(0, 0);
     }
   };
@@ -275,6 +278,18 @@ export default function Template({
   const prevPage = () => {
     if (currentPage > 0) {
       setCurrentPage(currentPage - 1);
+      setPageInput("");
+      window.scrollTo(0, 0);
+    }
+  };
+
+  const handlePageInputChange = (e) => {
+    const value = e.target.value;
+    setPageInput(value);
+    
+    const pageNumber = parseInt(value) - 1;
+    if (pageNumber >= 0 && pageNumber < pages.length) {
+      setCurrentPage(pageNumber);
       window.scrollTo(0, 0);
     }
   };
@@ -288,8 +303,10 @@ export default function Template({
       )}
       <div className="flex flex-col">
         {isShowToolbar && (
-          <div className="sticky top-0 z-20">
-            <Toolbar className="flex flex-wrap border-b border-gray-700 gap-4 p-2 bg-[#2a2d35]" editor={activeEditor.editor} />
+          <div className="sticky top-0 z-20 flex justify-center">
+            <div className="w-[7.5in] border-b border-gray-700 p-2 bg-[#2a2d35]">
+              <Toolbar className="flex flex-wrap justify-center gap-4" editor={activeEditor.editor} />
+            </div>
           </div>
         )}
         <div className="flex flex-col items-center" ref={tempRef}>
@@ -302,9 +319,19 @@ export default function Template({
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
-            <span className="text-lg font-medium">
-              Page {currentPage + 1} of {pages.length}
-            </span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max={pages.length}
+                value={pageInput || currentPage + 1}
+                onChange={handlePageInputChange}
+                className="w-16 text-center rounded border border-gray-300 p-1 bg-white text-black"
+              />
+              <span className="text-lg font-medium">
+                of {pages.length}
+              </span>
+            </div>
             <button
               onClick={nextPage}
               disabled={currentPage === pages.length - 1}
@@ -314,19 +341,6 @@ export default function Template({
             </button>
           </div>
         </div>
-        {(status === 0 || status === 10) && (
-          <div className="flex items-center justify-center mt-8">
-            <button 
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-500 text-white rounded" 
-              onClick={() => { 
-                setOption(2); 
-                setIsOpenList(true);
-              }}
-            >
-              Add New Clause
-            </button>
-          </div>
-        )}
       </div>
     </>
   );

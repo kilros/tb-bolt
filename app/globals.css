@@ -92,9 +92,9 @@
 
 .contract-page {
   width: 7.5in;
-  height: 14in;
-  padding: 0.5in;
-  margin: 2rem auto;
+  height: 13in;
+  padding: 0.25in;
+  margin: 1rem auto;
   position: relative;
   background: white;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -104,12 +104,14 @@
 
 .contract-page-content {
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .contract-page::after {
   content: counter(page);
   position: absolute;
-  bottom: 0.5in;
+  bottom: 0.25in;
   left: 50%;
   transform: translateX(-50%);
   font-size: 12px;

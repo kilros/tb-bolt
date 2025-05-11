@@ -76,10 +76,10 @@ export default function Template({
   const getNodeHeight = (node) => {
     if (!node.children || node.children.length === 0) return 0;
 
-    const text = typeof node.children[0] === 'string' 
-      ? node.children[0] 
+    const text = typeof node.children[0] === 'string'
+      ? node.children[0]
       : node.children[0].text || '';
-    
+
     const charsPerLine = 100;
     const baseHeight = 0.3;
     const lines = Math.ceil(text.length / charsPerLine);
@@ -91,7 +91,7 @@ export default function Template({
         return Math.max(0.8, lines * 0.4) + 0.3;
       case 'numbered-list':
       case 'bulleted-list':
-        return node.children.reduce((acc, child) => 
+        return node.children.reduce((acc, child) =>
           acc + getNodeHeight(child), 0);
       case 'list-item':
         return Math.max(0.4, lines * 0.3);
@@ -189,57 +189,58 @@ export default function Template({
   const pages = calculatePages();
 
   const renderPage = (clauses, pageIndex) => (
+    
     <div key={pageIndex} className="contract-page">
       <div className="contract-page-content">
         {clauses.map((clauseInfo, index) => {
           const { content: clause, originalIndex } = clauseInfo;
-          
+
           if (!refs.current[originalIndex]) {
             refs.current[originalIndex] = createRef();
           }
 
           return (
-            <div 
-              className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} 
-              onMouseOver={() => handleMouseOver(originalIndex)} 
-              onMouseLeave={() => handleMouseLeave(originalIndex)} 
+            <div
+              className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`}
+              onMouseOver={() => handleMouseOver(originalIndex)}
+              onMouseLeave={() => handleMouseLeave(originalIndex)}
               key={`${originalIndex}_${index}`}
               ref={refs.current[originalIndex]}
             >
-              <Clause 
-                status={status} 
-                content={clause} 
-                setContent={updateClause} 
-                index={originalIndex} 
-                setEditor={setActiveEditor} 
-                readOnly={readOnly} 
+              <Clause
+                status={status}
+                content={clause}
+                setContent={updateClause}
+                index={originalIndex}
+                setEditor={setActiveEditor}
+                readOnly={readOnly}
               />
               {!readOnly && (
                 <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[originalIndex] ? "" : "hidden"}`}>
-                  <button 
-                    className="px-2 py-1 bg-red-600 hover:bg-red-400 rounded text-sm" 
+                  <button
+                    className="px-2 py-1 bg-red-600 hover:bg-red-400 rounded text-sm"
                     onClick={() => {
-                      setCurrentIndex(originalIndex); 
+                      setCurrentIndex(originalIndex);
                       setIsOpenRemove(true);
                     }}
                   >
                     Delete
                   </button>
-                  <button 
-                    className="px-2 py-1 bg-blue-600 hover:bg-blue-400 rounded text-sm" 
-                    onClick={() => { 
-                      setOption(0); 
-                      setCurrentIndex(originalIndex); 
+                  <button
+                    className="px-2 py-1 bg-blue-600 hover:bg-blue-400 rounded text-sm"
+                    onClick={() => {
+                      setOption(0);
+                      setCurrentIndex(originalIndex);
                       setIsOpenList(true);
                     }}
                   >
                     Replace
                   </button>
-                  <button 
-                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-400 rounded text-sm" 
-                    onClick={() => { 
-                      setOption(1); 
-                      setCurrentIndex(originalIndex); 
+                  <button
+                    className="px-2 py-1 bg-yellow-600 hover:bg-yellow-400 rounded text-sm"
+                    onClick={() => {
+                      setOption(1);
+                      setCurrentIndex(originalIndex);
                       setIsOpenList(true);
                     }}
                   >
@@ -252,10 +253,10 @@ export default function Template({
         })}
         {pageIndex === pages.length - 1 && (status === 0 || status === 10) && (
           <div className="flex items-center justify-center mt-8">
-            <button 
-              className="px-4 py-2 bg-blue-700 hover:bg-blue-500 text-white rounded" 
-              onClick={() => { 
-                setOption(2); 
+            <button
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-500 text-white rounded"
+              onClick={() => {
+                setOption(2);
                 setIsOpenList(true);
               }}
             >
@@ -263,6 +264,9 @@ export default function Template({
             </button>
           </div>
         )}
+      </div>
+      <div className="absolute bottom-[0.25in] left-1/2 transform -translate-x-1/2 text-sm text-gray-600">
+        {pageIndex + 1}
       </div>
     </div>
   );
@@ -286,13 +290,17 @@ export default function Template({
   const handlePageInputChange = (e) => {
     const value = e.target.value;
     setPageInput(value);
-    
+
     const pageNumber = parseInt(value) - 1;
     if (pageNumber >= 0 && pageNumber < pages.length) {
       setCurrentPage(pageNumber);
       window.scrollTo(0, 0);
     }
   };
+
+  useEffect(() => {
+    scroll.scrollToTop({ duration: 500, smooth: true })
+  }, [currentPage])
 
   return (
     <>

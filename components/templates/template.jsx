@@ -1,12 +1,10 @@
 "use client"
-import ReactLoading from "react-loading";
 import { createRef, useEffect, useRef, useState } from "react";
 import { Toolbar } from "./components";
 import { template2 } from "../../utils/constants";
 import Clause from "./clause.jsx";
 import { createEditor, Editor } from "slate";
 import { animateScroll as scroll } from 'react-scroll';
-
 
 export default function Template({
   status = 10,
@@ -15,16 +13,13 @@ export default function Template({
   isShowToolbar = true,
   readOnly = false,
   tempRef = null,
+  clauseRefs = null,
 }) {
-
   const refs = useRef({});
-
   const isFirstLoad = useRef(true);
-
   const [currentIndex, setCurrentIndex] = useState(-1);
-  const [option, setOption] = useState(0);  //0:replace 1:insert 2:add
+  const [option, setOption] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-
   const [activeEditor, setActiveEditor] = useState({ editor: createEditor() });
   const [overStatus, setOverStatus] = useState({});
 
@@ -65,7 +60,6 @@ export default function Template({
     if (activeEditor.editor && status == 0) {
       Editor.addMark(activeEditor.editor, "highlight", true);
     }
-
   }, [activeEditor]);
 
   useEffect(() => {
@@ -91,8 +85,17 @@ export default function Template({
         <div className="flex flex-col pt-12 pb-6 px-2 bg-white">
           <div ref={tempRef}>
             {content && content.map((clause, index) => {
+              if (clauseRefs) {
+                clauseRefs.current[index] = createRef();
+              }
               return (
-                <div className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} onMouseOver={() => handleMouseOver(index)} onMouseLeave={() => handleMouseLeave(index)} key={content.length + "_" + index} ref={refs.current[index]}>
+                <div 
+                  className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} 
+                  onMouseOver={() => handleMouseOver(index)} 
+                  onMouseLeave={() => handleMouseLeave(index)} 
+                  key={content.length + "_" + index} 
+                  ref={clauseRefs ? clauseRefs.current[index] : null}
+                >
                   <Clause status={status} content={clause} setContent={updateClause} index={index} setEditor={setActiveEditor} readOnly={readOnly} />
                   {!readOnly && (
                     <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[index] ? "" : "hidden"}`}>

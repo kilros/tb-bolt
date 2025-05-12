@@ -10,6 +10,7 @@ import {
 const LIST_TYPES = ["numbered-list", "bulleted-list"];
 const TEXT_ALIGN_TYPES = ["left", "center", "right", "justify"];
 
+// eslint-disable-next-line react/display-name
 const Button = React.forwardRef(
   (
     {
@@ -31,12 +32,14 @@ const Button = React.forwardRef(
             ? '#374151'
             : 'none'
           }
+
         `
       )}
     />
   )
 )
 
+// eslint-disable-next-line react/display-name
 const Icon = React.forwardRef(
   (
     { className, ...props },
@@ -57,6 +60,7 @@ const Icon = React.forwardRef(
   )
 )
 
+// eslint-disable-next-line react/display-name
 const Menu = React.forwardRef(
   (
     { className, ...props },
@@ -69,12 +73,8 @@ const Menu = React.forwardRef(
       className={cx(
         className,
         css`
-          display: flex;
-          flex-wrap: nowrap;
-          overflow-x: auto;
-          gap: 2px;
           & > * {
-            flex-shrink: 0;
+            display: inline-block;
           }
         `
       )}
@@ -97,6 +97,7 @@ const Menu = React.forwardRef(
   )
 )
 
+// eslint-disable-next-line react/display-name
 export const Toolbar = React.forwardRef(
   (
     { className, ...props },

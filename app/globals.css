@@ -45,13 +45,6 @@
     --radius: 0.5rem;
   }
 
-  @font-face {
-    font-family: 'Material Icons';
-    font-style: normal;
-    font-weight: 400;
-    src: url("../public/fonts/MUI-ICON.woff2") format('woff2');
-  }
-
   .dark {
     --background: 230 25% 10%;
     --foreground: 210 15% 98%;
@@ -89,6 +82,7 @@
     counter-reset: page;
   }
 }
+<<<<<<< HEAD
 
 .contract-page {
   width: 7.5in;
@@ -232,3 +226,5 @@ blockquote {
 ::-webkit-scrollbar-thumb:hover {
   background: #5a5a5a;
 }
+=======
+>>>>>>> parent of dbbda82 (update)

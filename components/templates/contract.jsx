@@ -27,6 +27,7 @@ export default function Contract({
 
   const scrollToClause = (index) => {
     if (clauseRefs.current[index] && clauseRefs.current[index].current) {
+      console.log(clauseRefs.current[index].current, "=========hi==========")
       clauseRefs.current[index].current.scrollIntoView({ 
         behavior: "smooth",
         block: "start"
@@ -48,7 +49,7 @@ export default function Contract({
     <>
       <div className="container mx-auto px-4 py-6">
         <div className="w-full bg-[#2a2d35] rounded-lg p-6">
-          <div className="sticky top-0 z-20 mb-4">
+          <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">

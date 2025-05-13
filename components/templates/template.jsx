@@ -1,10 +1,14 @@
 "use client"
+import ReactLoading from "react-loading";
 import { createRef, useEffect, useRef, useState } from "react";
 import { Toolbar } from "./components";
 import { template2 } from "../../utils/constants";
 import Clause from "./clause.jsx";
+import RemoveClauseModal from "../modals/removeClauseModal.js";
+import ClauseListModal from "../modals/clauseListModal.js";
 import { createEditor, Editor } from "slate";
 import { animateScroll as scroll } from 'react-scroll';
+
 
 export default function Template({
   status = 10,
@@ -15,11 +19,17 @@ export default function Template({
   tempRef = null,
   clauseRefs = null,
 }) {
+
   const refs = useRef({});
+
   const isFirstLoad = useRef(true);
+
+  const [isOpenRemove, setIsOpenRemove] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(-1);
-  const [option, setOption] = useState(0);
+  const [option, setOption] = useState(0);  //0:replace 1:insert 2:add
+  const [isOpenList, setIsOpenList] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
   const [activeEditor, setActiveEditor] = useState({ editor: createEditor() });
   const [overStatus, setOverStatus] = useState({});
 
@@ -47,19 +57,88 @@ export default function Template({
     );
   }
 
-  useEffect(() => {
-    if (refs.current[currentIndex]?.current) {
-      refs.current[currentIndex].current.scrollIntoView({
-        behavior: "instant",
-        block: "center",
-      });
+  const removeClause = () => {
+    refs.current[currentIndex] = createRef();
+
+    const newContent = content.filter((_, i) => i !== currentIndex);
+    setContent(newContent);
+  }
+
+  const replaceClause = async (url) => {
+    setIsLoading(true);
+    try {
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const jsonData = await response.json();
+
+      updateClause(currentIndex, jsonData);
+
+    } catch (error) {
+      console.log(error)
     }
-  }, [content.length])
+    setIsLoading(false);
+  }
+
+  const insertClause = async (url) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const jsonData = await response.json();
+      refs.current[currentIndex] = createRef();
+      setContent((prev) => [
+        ...prev.slice(0, currentIndex), // Elements before the index
+        jsonData,                  // New element to insert
+        ...prev.slice(currentIndex),   // Elements after the index
+      ]);
+
+    } catch (error) {
+      console.log(error)
+    }
+    setIsLoading(false);
+  }
+
+  const addClause = async (url) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const jsonData = await response.json();
+      refs.current[content.length] = createRef();
+      setContent((prev) => [
+        ...prev, // Elements before the index
+        jsonData, // New element to insert
+      ]);
+
+      setCurrentIndex(content.length);
+    } catch (error) {
+      console.log(error)
+    }
+    setIsLoading(false);
+  }
+
+  const manageClause = async (url) => {
+    if (option == 0) await replaceClause(url);
+    else if (option == 1) await insertClause(url);
+    else if (option == 2) await addClause(url);
+  }
+
 
   useEffect(() => {
     if (activeEditor.editor && status == 0) {
       Editor.addMark(activeEditor.editor, "highlight", true);
     }
+
   }, [activeEditor]);
 
   useEffect(() => {
@@ -89,13 +168,7 @@ export default function Template({
                 clauseRefs.current[index] = createRef();
               }
               return (
-                <div 
-                  className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} 
-                  onMouseOver={() => handleMouseOver(index)} 
-                  onMouseLeave={() => handleMouseLeave(index)} 
-                  key={content.length + "_" + index} 
-                  ref={clauseRefs ? clauseRefs.current[index] : null}
-                >
+                <div className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} onMouseOver={() => handleMouseOver(index)} onMouseLeave={() => handleMouseLeave(index)} key={content.length + "_" + index} ref={clauseRefs ? clauseRefs.current[index] : null}>
                   <Clause status={status} content={clause} setContent={updateClause} index={index} setEditor={setActiveEditor} readOnly={readOnly} />
                   {!readOnly && (
                     <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[index] ? "" : "hidden"}`}>
@@ -119,6 +192,8 @@ export default function Template({
           }
         </div>
       </div>
+      <RemoveClauseModal openModal={isOpenRemove} confirm={removeClause} changeModalOpen={setIsOpenRemove} />
+      <ClauseListModal openModal={isOpenList} confirm={manageClause} onClose={() => setIsOpenList(false)} />
     </>
   );
 }

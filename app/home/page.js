@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { 
-  Database, Shield, FileText, Network, Cloud, Lock, CheckCircle2, XCircle,
-  KeyRound, Workflow, AppWindow, Search, Settings, Scale, Menu, X
+import {
+  CheckCircle2, XCircle,
+  Workflow, AppWindow, Search, Settings, Scale, Menu, X
 } from "lucide-react";
 import { useState } from "react";
 import Image from 'next/image';
@@ -30,7 +30,7 @@ export default function Home() {
                 priority
               />
             </div>
-            
+
             {/* Mobile menu button */}
             <div className="md:hidden">
               <Button
@@ -52,7 +52,7 @@ export default function Home() {
               <Button variant="ghost">Features</Button>
               <Button variant="ghost">Compare</Button>
               <Button variant="ghost">About</Button>
-              <Button 
+              <Button
                 className="bg-chart-1/90 hover:bg-chart-1 text-white"
                 onClick={() => router.push('/login')}
               >
@@ -67,7 +67,7 @@ export default function Home() {
               <Button variant="ghost" className="w-full justify-start">Features</Button>
               <Button variant="ghost" className="w-full justify-start">Compare</Button>
               <Button variant="ghost" className="w-full justify-start">About</Button>
-              <Button 
+              <Button
                 className="w-full bg-chart-1/90 hover:bg-chart-1 text-white"
                 onClick={() => router.push('/login')}
               >

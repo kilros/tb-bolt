@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   CheckCircle2, XCircle,
-  Workflow, AppWindow, Search, Settings, Scale, Menu, X
+  Workflow, AppWindow, Search, Settings, Scale, Menu, X,
+  Network
 } from "lucide-react";
 import { useState } from "react";
 import Image from 'next/image';

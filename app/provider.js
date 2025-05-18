@@ -16,8 +16,6 @@ import { usePathname } from "next/navigation";
 import { TBContext } from "../context/Context";
 import { baseSepolia } from "viem/chains";
 import { ThemeProvider } from "@/components/theme-provider";
-import Header from "@/components/layout/Header";
-import { URLs } from "@/utils/constants";
 
 const queryClient = new QueryClient();
 
@@ -91,13 +89,9 @@ function TBProvider({ children }) {
                     setIsAuth
                   }}
                 >
-                  {pathName != "/home" && pathName != "/login" && pathName != "/register" && (
-                    <Header />
-                  )}
                   {children}
                 </TBContext.Provider>
               </ThemeProvider>
-              {/* <Footer /> */}
             </div>
           </QueryClientProvider>
         </WagmiProvider>

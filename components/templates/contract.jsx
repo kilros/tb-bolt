@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { animateScroll as scroll } from 'react-scroll';
 
 export default function Contract({
   isCreate = false,
@@ -27,10 +26,13 @@ export default function Contract({
 
   const scrollToClause = (index) => {
     if (clauseRefs.current[index] && clauseRefs.current[index].current) {
-      console.log(clauseRefs.current[index].current, "=========hi==========")
-      clauseRefs.current[index].current.scrollIntoView({ 
-        behavior: "smooth",
-        block: "start"
+      const yOffset = -100; // Offset to account for header/toolbar
+      const element = clauseRefs.current[index].current;
+      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      
+      window.scrollTo({
+        top: y,
+        behavior: 'smooth'
       });
     }
   };
@@ -49,8 +51,8 @@ export default function Contract({
     <>
       <div className="container mx-auto px-4 py-6">
         <div className="w-full bg-[#2a2d35] rounded-lg p-6">
-          <div>
-            <DropdownMenu>
+          <div className="mb-4">
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full justify-between">
                   <span>Jump to Clause</span>
@@ -61,7 +63,10 @@ export default function Contract({
                 {getClauseTitles().map((title, index) => (
                   <DropdownMenuItem
                     key={index}
-                    onClick={() => scrollToClause(index)}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      scrollToClause(index);
+                    }}
                     className="cursor-pointer"
                   >
                     {title}
@@ -76,7 +81,7 @@ export default function Contract({
               content={content} 
               setContent={setContent} 
               isShowToolbar={isCreate} 
-              readOnly={isCreate ? false : true}
+              readOnly={true}
               clauseRefs={clauseRefs}
             />
           </div>

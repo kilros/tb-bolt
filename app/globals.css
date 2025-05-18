@@ -197,20 +197,13 @@ blockquote {
   }
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
+/* ::-webkit-scrollbar {
+  width: 12px;
+  background: #d3cccc;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5a;
-}
+  background: #858484;
+  border-radius: 10px;
+} */

@@ -17,6 +17,7 @@ import { TBContext } from "../context/Context";
 import { baseSepolia } from "viem/chains";
 import { ThemeProvider } from "@/components/theme-provider";
 import Header from "@/components/layout/Header";
+import { URLs } from "@/utils/constants";
 
 const queryClient = new QueryClient();
 

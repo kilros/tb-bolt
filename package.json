@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 4000",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -49,6 +49,7 @@
     "react-loading": "^2.0.3",
     "react-scroll": "^1.9.3",
     "react-signature-canvas": "^1.0.6",
+    "react-to-print": "^2.15.1",
     "react-toastify": "^9.1.1",
     "reactjs-popup": "2.0.6",
     "siwe": "^2.1.4",

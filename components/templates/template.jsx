@@ -17,7 +17,6 @@ export default function Template({
   isShowToolbar = true,
   readOnly = false,
   tempRef = null,
-  clauseRefs = null,
 }) {
 
   const refs = useRef({});
@@ -135,6 +134,15 @@ export default function Template({
 
 
   useEffect(() => {
+    if (refs.current[currentIndex]?.current) {
+      refs.current[currentIndex].current.scrollIntoView({
+        behavior: "instant",
+        block: "center",
+      });
+    }
+  }, [content.length])
+
+  useEffect(() => {
     if (activeEditor.editor && status == 0) {
       Editor.addMark(activeEditor.editor, "highlight", true);
     }
@@ -152,7 +160,7 @@ export default function Template({
     <>
       {isLoading && (
         <div className="fixed left-0 right-0 top-[60px] md:top-[80px] bottom-[0px] md:bottom-[0px] flex justify-center items-center backdrop-blur-sm bg-white/5 z-50">
-          <ReactLoading type="spinningBubbles" color="#ffb800" />
+          <ReactLoading type="spinningBubbles" color="#000" />
         </div>
       )}
       <div className="flex flex-col gap-4">
@@ -164,11 +172,8 @@ export default function Template({
         <div className="flex flex-col pt-12 pb-6 px-2 bg-white">
           <div ref={tempRef}>
             {content && content.map((clause, index) => {
-              if (clauseRefs) {
-                clauseRefs.current[index] = createRef();
-              }
               return (
-                <div className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} onMouseOver={() => handleMouseOver(index)} onMouseLeave={() => handleMouseLeave(index)} key={content.length + "_" + index} ref={clauseRefs ? clauseRefs.current[index] : null}>
+                <div className={`relative ${!readOnly ? "hover:border border-dashed border-black rounded-lg" : ""}`} onMouseOver={() => handleMouseOver(index)} onMouseLeave={() => handleMouseLeave(index)} key={content.length + "_" + index} ref={refs.current[index]}>
                   <Clause status={status} content={clause} setContent={updateClause} index={index} setEditor={setActiveEditor} readOnly={readOnly} />
                   {!readOnly && (
                     <div className={`absolute top-2 right-6 flex flex-row gap-2 ${overStatus[index] ? "" : "hidden"}`}>

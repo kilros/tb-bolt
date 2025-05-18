@@ -1,8 +1,9 @@
 "use client"
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from 'next/image';
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, Menu, X, User, Mail, Building, Briefcase, AtSign } from 'lucide-react';
+import { useAccount, useConfig, useDisconnect, useSignMessage } from "wagmi";
 
 import {
   DropdownMenu,
@@ -24,21 +25,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { Logo } from "@/assets";
-import { positions } from "@/utils/constants";
+import axios from "axios";
+import { positions, URLs } from "@/utils/constants";
 import { useTBContext } from "@/context/Context";
+import { editUser, getUser } from "@/utils/interact";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { SiweMessage } from "siwe";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export default function Header() {
 
+  const config = useConfig();
+
+  const { address, isConnected, chainId } = useAccount();
+
   const router = useRouter();
   const pathname = usePathname();
 
-  const { isOnMyDoc, setIsOnMyDoc, isOnSharedDoc, setIsOnSharedDoc } = useTBContext();
+  const { isOnMyDoc, setIsOnMyDoc, isOnSharedDoc, setIsOnSharedDoc, isAuth, setIsAuth, web3Auth } = useTBContext();
 
+  const { disconnect } = useDisconnect();
 
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
+  const { signMessageAsync } = useSignMessage();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -57,6 +69,100 @@ export default function Header() {
       func: () => { router.push("/notifications") }, label: "Notifications", id: "notifications", count: 0
     }
   ];
+
+  const getUserInfo = async () => {
+
+    try {
+      const res = await axios.get(`${URLs.TBBackendAuth}/myInfo`, { withCredentials: true });
+      setIsAuth(address == res.data);
+    } catch (error) {
+      toast.error("Error fetching user info");
+      // window.location.href = "/login";
+    }
+
+    const userData = await web3Auth.getUserInfo();
+
+    const user = await getUser(config, address);
+    setProfile({
+      userName: user[0],
+      fullName: user[1] + " " + user[2],
+      company: user[3],
+      position: user[4],
+      email: userData.email
+    });
+  }
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await editUser(config, profile.userName, profile.company, profile.position);
+      if (res) {
+        await getUserInfo();
+        setProfileDialogOpen(false);
+      }
+    } catch (error) {
+      console.error('Profile update failed:', error);
+    }
+  };
+
+  const signOut = async () => {
+    setIsAuth(false);
+    await axios.get(`${URLs.TBBackendAuth}/logOut`, { withCredentials: true });
+    disconnect();
+    window.location.href = "/login"
+  }
+
+  const signIn = async () => {
+    try {
+      const nonce = (await axios.get(`${URLs.TBBackendAuth}/getNonce`, { withCredentials: true })).data;
+
+      const message = new SiweMessage({
+        domain: window.location.host,
+        address,
+        statement: 'Sign in with Ethereum to Tome Block.',
+        uri: window.location.origin,
+        version: '1',
+        chainId,
+        nonce,
+      });
+
+      const messageToSign = message.prepareMessage();
+
+      const signature = await signMessageAsync({ message: messageToSign });
+
+      // Send the signature + message to the backend for verification
+      const response = await axios.post(`${URLs.TBBackendAuth}/verify`, ({ message: message, signature: signature }), { withCredentials: true }, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const authStatus = Boolean(response.data.ok);
+      setIsAuth(authStatus);
+
+      if (authStatus) {
+        console.log("✅ Authentication successful!");
+      } else {
+        console.error("❌ Authentication failed!");
+      }
+    } catch (error) {
+      disconnect();
+      console.error("Error signing message:", error);
+    }
+  }
+
+  useEffect(() => {
+    if (web3Auth.connected)
+      getUserInfo();
+  }, [web3Auth.connected])
+
+  useEffect(() => {
+    if (!isConnected) router.push('/login');
+  }, [isConnected])
+
+  useEffect(() => {
+    if (!isAuth) signIn();
+  }, [isAuth])
 
   return (
     <>
@@ -121,7 +227,7 @@ export default function Header() {
                   </DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-500">
+                  <DropdownMenuItem className="text-red-500" onClick={signOut}>
                     Sign Out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -195,7 +301,7 @@ export default function Header() {
               Update your profile information
             </DialogDescription>
           </DialogHeader>
-          <form >
+          <form onSubmit={handleProfileUpdate}>
             <div className="grid gap-4 py-4">
               <div className="flex flex-row gap-2">
                 <div className="grid w-1/2 gap-1">

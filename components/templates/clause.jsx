@@ -1,5 +1,5 @@
 "use client"
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Editable, Slate, withReact } from "slate-react";
 import { withHistory } from "slate-history";
 import {
